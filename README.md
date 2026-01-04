@@ -22,6 +22,7 @@ A Docker-based tool that generates a complete development environment for FastAP
 
 - Docker
 - Git
+- Make (optional, but recommended)
 
 ### Build Steps
 
@@ -33,6 +34,11 @@ A Docker-based tool that generates a complete development environment for FastAP
 
 2. Build the Docker image:
    ```bash
+   make build
+   ```
+   
+   Or manually:
+   ```bash
    docker build -t favue-scaf .
    ```
 
@@ -40,27 +46,26 @@ This creates a Docker image named `favue-scaf` containing the scaffolding tool a
 
 ## Using the Tool
 
+### Quick Start
+
 1. Ensure Docker is running on your system
 
 2. Run the scaffolder:
    ```bash
-   docker run --rm -it \
-     -v "$HOME/projects:/workspace" \
-     -w /workspace \
-     favue-scaf \
-     python -m scaffolder
+   make run
    ```
-
+   
    This will:
+   - Build the Docker image (if not already built)
    - Mount your `~/projects` directory into the container
    - Run the interactive scaffolder
    - Create the new project in your projects folder
 
 3. Follow the interactive prompts:
-   - Project name
-   - Project location (relative to `/workspace` in container, which maps to your mounted directory)
-   - Database name
-   - Port numbers (API, Web, Database)
+   - **Project name** (e.g., `myapp`)
+   - **Project location** (defaults to `/workspace/myapp` which maps to `~/projects/myapp` on your host)
+   - **Database name** (defaults to project name)
+   - **Port numbers** (API, Web, Database - defaults: 8000, 5173, 3306)
 
 4. After scaffolding, navigate to your new project and run:
    ```bash
@@ -68,11 +73,43 @@ This creates a Docker image named `favue-scaf` containing the scaffolding tool a
    make setup
    ```
 
-### Customizing the Mount Point
+### Customizing the Projects Directory
 
-If you want to use a different directory, adjust the mount:
+You can override the default projects directory (`~/projects`) by setting the `PROJECTS_DIR` environment variable:
+
+```bash
+export PROJECTS_DIR=/custom/path/to/projects
+make run
+```
+
+Or inline:
+```bash
+PROJECTS_DIR=/custom/path/to/projects make run
+```
+
+### Manual Docker Run
+
+If you prefer to run Docker directly without Make:
+
 ```bash
 docker run --rm -it \
+  -e USER_ID=$(id -u) \
+  -e GROUP_ID=$(id -g) \
+  -v "$HOME/projects:/workspace" \
+  -w /workspace \
+  favue-scaf \
+  python -m scaffolder
+```
+
+**Note:** The `USER_ID` and `GROUP_ID` environment variables ensure files are created with your host user's ownership.
+
+### Custom Mount Point
+
+To use a different directory, adjust the mount:
+```bash
+docker run --rm -it \
+  -e USER_ID=$(id -u) \
+  -e GROUP_ID=$(id -g) \
   -v "/path/to/your/projects:/workspace" \
   -w /workspace \
   favue-scaf \
@@ -130,6 +167,47 @@ your-project-name/
 - **Hot Reload**: Both backend and frontend auto-reload on changes
 - **Makefile**: Common development tasks
 - **Volume Management**: Persistent database storage
+
+## Generated Project Usage
+
+After scaffolding, navigate to your project and use the Makefile:
+
+### Setup (First Time)
+
+```bash
+cd ~/projects/your-project-name
+make setup
+```
+
+This will:
+1. Create `.env` files from examples
+2. Create Docker volumes
+3. Build Docker images
+4. Install Python dependencies
+5. Install npm dependencies
+6. Start all services
+7. Run database migrations
+
+### Common Makefile Commands
+
+- `make setup` - Complete setup (first time only)
+- `make build` - Build Docker images
+- `make pip` - Install Python dependencies into persistent volume
+- `make npm` - Install npm dependencies
+- `make up` - Start all services (backend, frontend, database)
+- `make down` - Stop all services
+- `make migrate` - Run database migrations
+- `make test` - Run backend tests
+- `make logs` - View service logs
+
+### Accessing Services
+
+After running `make setup` or `make up`:
+
+- **Backend API**: http://localhost:8000
+- **Frontend**: http://localhost:5173
+- **API Docs**: http://localhost:8000/docs
+- **Database**: localhost:3306 (default port, configurable)
 
 ## Development
 
