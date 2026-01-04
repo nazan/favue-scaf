@@ -40,6 +40,7 @@ touch-all:
 create-volumes:
 	@echo "Creating Docker volumes..."
 	@docker volume create ${PROJECT_NAME}_dbdata 2>/dev/null || echo "Volume already exists"
+	@docker volume create ${PROJECT_NAME}_dbdata_test 2>/dev/null || echo "Volume already exists"
 	@docker volume create ${PROJECT_NAME}_sitepack 2>/dev/null || echo "Volume already exists"
 	@echo "✓ Docker volumes ready."
 

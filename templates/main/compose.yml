@@ -16,6 +16,8 @@ services:
     depends_on:
       ${BACKEND_NAME}-database:
         condition: service_started
+      ${BACKEND_NAME}-database-test:
+        condition: service_started
     ports:
       - "${API_PORT}:8000"
     command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -52,10 +54,26 @@ services:
       - "MYSQL_ROOT_PASSWORD=password"
     command: --default-authentication-plugin=mysql_native_password
 
+  ${BACKEND_NAME}-database-test:
+    image: mysql:8.0
+    volumes:
+      - dbdata-test:/var/lib/mysql
+    ports:
+      - "${DB_TEST_PORT}:3306"
+    environment:
+      - "MYSQL_DATABASE=${DB_NAME}"
+      - "MYSQL_USER=user"
+      - "MYSQL_PASSWORD=password"
+      - "MYSQL_ROOT_PASSWORD=password"
+    command: --default-authentication-plugin=mysql_native_password
+
 volumes:
   dbdata:
     external: true
     name: ${PROJECT_NAME}_dbdata
+  dbdata-test:
+    external: true
+    name: ${PROJECT_NAME}_dbdata_test
   sitepack:
     external: true
     name: ${PROJECT_NAME}_sitepack

@@ -1,10 +1,11 @@
 import pytest
 from app.services.utility_service import UtilityService
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.config import settings
 
 
 @pytest.mark.asyncio
-async def test_get_database_version(utility_service: UtilityService):
+async def test_get_database_version(setup_db, utility_service: UtilityService, test_logger):
     """
     Test that utility service can retrieve database version.
     This test demonstrates:
@@ -12,6 +13,8 @@ async def test_get_database_version(utility_service: UtilityService):
     - Database connectivity
     - Async test patterns
     """
+    # test_logger.info(settings.database_url)
+    
     version = await utility_service.get_database_version()
     
     assert isinstance(version, str), "Database version should be a string"

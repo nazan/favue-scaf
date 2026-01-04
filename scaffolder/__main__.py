@@ -21,6 +21,7 @@ class Scaffolder:
         self.api_port = 8000
         self.web_port = 5173
         self.db_port = 3306
+        self.db_test_port = 3307  # Test database port (main port + 1)
         self.uid = os.getuid()
         self.gid = os.getgid()
         
@@ -87,6 +88,8 @@ class Scaffolder:
         if port_input:
             try:
                 self.db_port = int(port_input)
+                # Auto-set test port to main port + 1
+                self.db_test_port = self.db_port + 1
             except ValueError:
                 pass
         
@@ -101,7 +104,7 @@ class Scaffolder:
         print(f"  Backend: {self.backend_name}")
         print(f"  Frontend: {self.frontend_name}")
         print(f"  Database: {self.db_name}")
-        print(f"  Ports: API={self.api_port}, Web={self.web_port}, DB={self.db_port}")
+        print(f"  Ports: API={self.api_port}, Web={self.web_port}, DB={self.db_port}, DB_TEST={self.db_test_port}")
         print()
         
         confirm = input("Proceed? [Y/n]: ").strip().lower()
@@ -361,7 +364,18 @@ class Scaffolder:
     
     def _create_env_example(self):
         """Create .env.example"""
-        self._process_template('main/.env.example', '.env.example')
+        env_content = f"""PROJECT_NAME={self.project_name}
+BACKEND_NAME={self.backend_name}
+FRONTEND_NAME={self.frontend_name}
+DB_NAME={self.db_name}
+API_PORT={self.api_port}
+WEB_PORT={self.web_port}
+DB_PORT={self.db_port}
+DB_TEST_PORT={self.db_test_port}
+UID={self.uid}
+GID={self.gid}
+"""
+        Path('.env.example').write_text(env_content)
     
     def _create_gitignore(self):
         """Create .gitignore"""
@@ -392,6 +406,7 @@ class Scaffolder:
             API_PORT=self.api_port,
             WEB_PORT=self.web_port,
             DB_PORT=self.db_port,
+            DB_TEST_PORT=self.db_test_port,
             UID=self.uid,
             GID=self.gid,
         )
