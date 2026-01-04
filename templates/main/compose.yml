@@ -1,0 +1,62 @@
+services:
+  ${BACKEND_NAME}:
+    build:
+      context: ./${BACKEND_NAME}
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID}
+        GROUP_ID: ${GID}
+    user: "${UID}:${GID}"
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./${BACKEND_NAME}:/home/appuser/app
+      - sitepack:/home/appuser/venv
+    env_file: ./${BACKEND_NAME}/.env
+    depends_on:
+      ${BACKEND_NAME}-database:
+        condition: service_started
+    ports:
+      - "${API_PORT}:8000"
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  ${FRONTEND_NAME}:
+    build:
+      context: ./${FRONTEND_NAME}
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${UID}
+        GROUP_ID: ${GID}
+    user: "${UID}:${GID}"
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./${FRONTEND_NAME}:/home/node/app
+    environment:
+      - VITE_API_BASE_URL=http://localhost:${API_PORT}
+    ports:
+      - "${WEB_PORT}:5173"
+    depends_on:
+      - ${BACKEND_NAME}
+
+  ${BACKEND_NAME}-database:
+    image: mysql:8.0
+    volumes:
+      - dbdata:/var/lib/mysql
+    ports:
+      - "${DB_PORT}:3306"
+    environment:
+      - "MYSQL_DATABASE=${DB_NAME}"
+      - "MYSQL_USER=user"
+      - "MYSQL_PASSWORD=password"
+      - "MYSQL_ROOT_PASSWORD=password"
+    command: --default-authentication-plugin=mysql_native_password
+
+volumes:
+  dbdata:
+    external: true
+    name: ${PROJECT_NAME}_dbdata
+  sitepack:
+    external: true
+    name: ${PROJECT_NAME}_sitepack
+
