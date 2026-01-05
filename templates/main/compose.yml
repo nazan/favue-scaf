@@ -15,9 +15,9 @@ services:
     env_file: ./${BACKEND_NAME}/.env
     depends_on:
       ${BACKEND_NAME}-database:
-        condition: service_started
+        condition: service_healthy
       ${BACKEND_NAME}-database-test:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${API_PORT}:8000"
     command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -53,6 +53,12 @@ services:
       - "MYSQL_PASSWORD=password"
       - "MYSQL_ROOT_PASSWORD=password"
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   ${BACKEND_NAME}-database-test:
     image: mysql:8.0
@@ -66,6 +72,12 @@ services:
       - "MYSQL_PASSWORD=password"
       - "MYSQL_ROOT_PASSWORD=password"
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
 volumes:
   dbdata:

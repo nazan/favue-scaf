@@ -1,6 +1,6 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from app.db.tables import metadata
 from app.db.session import db_session, clean_database_url
 from app.main import app
@@ -22,18 +22,8 @@ def settings_factory():
     return _create_settings
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    """Override the default function-scoped event_loop to module scope."""
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="module")
-def engine(event_loop):
+@pytest_asyncio.fixture(scope="module")
+async def engine():
     """Create async engine within the event loop context."""
     # Clean the URL to remove unsupported parameters like ssl_disabled
     database_url = clean_database_url(settings.database_url)
@@ -46,18 +36,21 @@ def engine(event_loop):
     )
     
     yield eng
+    
+    # Dispose of the engine at the end
+    await eng.dispose()
 
 
-@pytest.fixture(scope="module")
-def TestingSessionLocal(engine):
+@pytest_asyncio.fixture(scope="module")
+async def TestingSessionLocal(engine):
     """Create async session factory."""
-    return sessionmaker(
+    return async_sessionmaker(
         bind=engine, class_=AsyncSession, expire_on_commit=False
     )
 
 
 # Override FastAPI's get_db dependency
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def test_db_session(TestingSessionLocal):
     """Provide a database session and ensure proper cleanup."""
     async with TestingSessionLocal() as session:
@@ -65,8 +58,15 @@ async def test_db_session(TestingSessionLocal):
             yield session
         finally:
             # Always rollback to undo all changes made during the test
-            await session.rollback()
-            await session.close()  # Explicitly close the session
+            try:
+                if session.is_active:
+                    await session.rollback()
+            except Exception:
+                pass  # Session may already be closed
+            try:
+                await session.close()  # Explicitly close the session
+            except Exception:
+                pass  # Session may already be closed
 
 @pytest.fixture
 def test_logger():
@@ -85,7 +85,7 @@ def utility_service(test_db_session: AsyncSession, test_logger):
     """Fixture that provides an instance of UtilityService with a test database session."""
     return get_utility_service(test_db_session, test_logger)
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def setup_db(engine):
     """Recreate the test database before each module's tests."""
     async with engine.begin() as conn:
@@ -95,9 +95,6 @@ async def setup_db(engine):
 
     async with engine.begin() as conn:
         await conn.run_sync(metadata.drop_all)
-    
-    # Dispose of the engine at the end of each module
-    await engine.dispose()
 
 # Apply the database override to the FastAPI app
 app.dependency_overrides[db_session] = test_db_session

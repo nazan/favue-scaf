@@ -67,7 +67,21 @@ class Scaffolder:
             self.project_path = default_path
         
         # Database name
-        self.db_name = input(f"Database name [{self.project_name}]: ").strip() or self.project_name
+        # Default to project name with hyphens replaced by underscores (MySQL doesn't allow hyphens in unquoted identifiers)
+        default_db_name = self.project_name.replace('-', '_')
+        while True:
+            db_name_input = input(f"Database name [{default_db_name}]: ").strip()
+            candidate_name = db_name_input if db_name_input else default_db_name
+            
+            # Auto-convert hyphens to underscores for MySQL compatibility
+            candidate_name = candidate_name.replace('-', '_')
+            
+            # Validate database name: MySQL allows alphanumeric, underscores, and dollar signs
+            # Cannot start with a number, must not be empty
+            if candidate_name and candidate_name.replace('_', '').replace('$', '').isalnum() and not candidate_name[0].isdigit():
+                self.db_name = candidate_name
+                break
+            print("Invalid database name. Use alphanumeric characters, underscores, or dollar signs. Cannot start with a number.")
         
         # Ports
         port_input = input(f"API port [{self.api_port}]: ").strip()
@@ -94,8 +108,8 @@ class Scaffolder:
                 pass
         
         # Derived names
-        self.backend_name = f"{self.project_name}-core"
-        self.frontend_name = f"{self.project_name}-web"
+        self.backend_name = "core"
+        self.frontend_name = "web"
         
         print()
         print("Configuration:")
@@ -239,6 +253,7 @@ class Scaffolder:
         self._create_env_example()
         self._create_gitignore()
         self._create_readme()
+        self._create_publish_script()
         print("  ✓ Main files created\n")
     
     def finalize(self):
@@ -297,6 +312,7 @@ class Scaffolder:
             ('test.env.example', 'test.env.example'),
             ('.gitignore', '.gitignore'),
             ('.dockerignore', '.dockerignore'),
+            ('run-tests.sh', 'run-tests.sh'),
             ('app/main.py', 'app/main.py'),
             ('app/config.py', 'app/config.py'),
             ('app/log_setup.py', 'app/log_setup.py'),
@@ -316,6 +332,9 @@ class Scaffolder:
         
         for template_rel, output_rel in backend_templates:
             self._process_template(f'backend/{template_rel}', output_rel)
+        
+        # Make run-tests.sh executable
+        os.chmod('run-tests.sh', 0o755)
     
     def _create_frontend_files(self):
         """Create all frontend files"""
@@ -384,6 +403,12 @@ GID={self.gid}
     def _create_readme(self):
         """Create README.md"""
         self._process_template('main/README.md', 'README.md')
+    
+    def _create_publish_script(self):
+        """Create publish-to-github.sh script"""
+        self._process_template('main/publish-to-github.sh', 'publish-to-github.sh')
+        # Make it executable
+        os.chmod('publish-to-github.sh', 0o755)
     
     def _process_template(self, template_path, output_path):
         """Process a template file with variable substitution"""

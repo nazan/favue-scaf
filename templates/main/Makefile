@@ -1,7 +1,7 @@
 MY_UID = $$(id -u)
 MY_GID = $$(id -g)
 
-.PHONY: setup first-time create-volumes build pip up down migrate test logs
+.PHONY: setup first-time create-volumes build pip up down migrate test logs clean-volumes
 
 setup: first-time create-volumes build pip up migrate
 	@echo ""
@@ -39,9 +39,23 @@ touch-all:
 
 create-volumes:
 	@echo "Creating Docker volumes..."
-	@docker volume create ${PROJECT_NAME}_dbdata 2>/dev/null || echo "Volume already exists"
-	@docker volume create ${PROJECT_NAME}_dbdata_test 2>/dev/null || echo "Volume already exists"
-	@docker volume create ${PROJECT_NAME}_sitepack 2>/dev/null || echo "Volume already exists"
+	@if docker volume inspect ${PROJECT_NAME}_dbdata >/dev/null 2>&1; then \
+		echo "⚠ Warning: Volume ${PROJECT_NAME}_dbdata already exists (may contain old data)"; \
+		echo "   Run 'make clean-volumes' to remove volumes and start fresh"; \
+	else \
+		docker volume create ${PROJECT_NAME}_dbdata; \
+	fi
+	@if docker volume inspect ${PROJECT_NAME}_dbdata_test >/dev/null 2>&1; then \
+		echo "⚠ Warning: Volume ${PROJECT_NAME}_dbdata_test already exists (may contain old data)"; \
+		echo "   Run 'make clean-volumes' to remove volumes and start fresh"; \
+	else \
+		docker volume create ${PROJECT_NAME}_dbdata_test; \
+	fi
+	@if docker volume inspect ${PROJECT_NAME}_sitepack >/dev/null 2>&1; then \
+		echo "⚠ Warning: Volume ${PROJECT_NAME}_sitepack already exists"; \
+	else \
+		docker volume create ${PROJECT_NAME}_sitepack; \
+	fi
 	@echo "✓ Docker volumes ready."
 
 build: touch-all
@@ -54,7 +68,7 @@ pip: build
 	@docker compose run --rm --no-deps ${BACKEND_NAME} sh -c "python -m venv /home/appuser/venv 2>/dev/null || true && pip install --no-cache-dir -r requirements.txt"
 	@echo "✓ Dependencies installed."
 
-up: touch-all create-volumes
+up: touch-all
 	@echo "Starting services..."
 	@docker compose up -d
 	@echo "✓ Services started."
@@ -68,8 +82,28 @@ migrate:
 	@echo "✓ Migrations complete."
 
 test:
-	@docker compose exec ${BACKEND_NAME} pytest
+	@echo "Running test database migrations and tests..."
+	@docker compose run --rm --no-deps ${BACKEND_NAME} ./run-tests.sh
+	@echo "✓ Tests complete."
 
 logs:
 	@docker compose logs -f ${BACKEND_NAME} ${FRONTEND_NAME}
+
+clean-volumes:
+	@echo "⚠ WARNING: This will delete all database data in the Docker volumes!"
+	@echo "Database volumes to be removed:"
+	@echo "  - ${PROJECT_NAME}_dbdata"
+	@echo "  - ${PROJECT_NAME}_dbdata_test"
+	@echo ""
+	@echo "Note: Python packages volume (${PROJECT_NAME}_sitepack) will be preserved."
+	@echo ""
+	@echo "To proceed, run: make clean-volumes CONFIRM=yes"
+	@if [ "$(CONFIRM)" != "yes" ]; then \
+		echo "Cancelled. Set CONFIRM=yes to proceed."; \
+		exit 1; \
+	fi
+	@echo "Removing database volumes..."
+	@docker volume rm ${PROJECT_NAME}_dbdata 2>/dev/null || echo "Volume ${PROJECT_NAME}_dbdata not found"
+	@docker volume rm ${PROJECT_NAME}_dbdata_test 2>/dev/null || echo "Volume ${PROJECT_NAME}_dbdata_test not found"
+	@echo "✓ Database volumes removed."
 
