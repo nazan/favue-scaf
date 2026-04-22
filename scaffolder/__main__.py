@@ -251,6 +251,8 @@ class Scaffolder:
         self._create_compose_yml()
         self._create_makefile()
         self._create_env_example()
+        self._create_nginx()
+        self._create_compose_override_example()
         self._create_gitignore()
         self._create_readme()
         self._create_publish_script()
@@ -278,6 +280,7 @@ class Scaffolder:
         # Directory structure
         dirs = [
             'app/api/v1',
+            'app/auth',
             'app/core',
             'app/db',
             'app/services',
@@ -317,15 +320,28 @@ class Scaffolder:
             ('app/config.py', 'app/config.py'),
             ('app/log_setup.py', 'app/log_setup.py'),
             ('app/exceptions.py', 'app/exceptions.py'),
+            ('app/topic_utils.py', 'app/topic_utils.py'),
             ('app/service_init.py', 'app/service_init.py'),
             ('app/core/di.py', 'app/core/di.py'),
             ('app/db/session.py', 'app/db/session.py'),
             ('app/db/tables.py', 'app/db/tables.py'),
+            ('app/auth/__init__.py', 'app/auth/__init__.py'),
+            ('app/auth/jwt_utils.py', 'app/auth/jwt_utils.py'),
             ('app/services/utility_service.py', 'app/services/utility_service.py'),
+            ('app/services/email_service.py', 'app/services/email_service.py'),
+            ('app/services/user_service.py', 'app/services/user_service.py'),
+            ('app/services/websocket_manager.py', 'app/services/websocket_manager.py'),
             ('app/schemas/utility_schema.py', 'app/schemas/utility_schema.py'),
+            ('app/schemas/user_schema.py', 'app/schemas/user_schema.py'),
             ('app/api/v1/main_routes.py', 'app/api/v1/main_routes.py'),
+            ('app/api/v1/auth_routes.py', 'app/api/v1/auth_routes.py'),
+            ('app/api/v1/infra_routes.py', 'app/api/v1/infra_routes.py'),
+            ('app/api/v1/internal_routes.py', 'app/api/v1/internal_routes.py'),
+            ('app/api/v1/websocket_routes.py', 'app/api/v1/websocket_routes.py'),
+            ('app/taskiq_worker.py', 'app/taskiq_worker.py'),
             ('alembic/env.py', 'alembic/env.py'),
             ('alembic/script.py.mako', 'alembic/script.py.mako'),
+            ('alembic/versions/001_initial_schema.py', 'alembic/versions/001_initial_schema.py'),
             ('tests/conftest.py', 'tests/conftest.py'),
             ('tests/test_utility_service.py', 'tests/test_utility_service.py'),
         ]
@@ -362,9 +378,14 @@ class Scaffolder:
             ('src/main.js', 'src/main.js'),
             ('src/App.vue', 'src/App.vue'),
             ('src/config.js', 'src/config.js'),
+            ('src/utils/infraTopic.js', 'src/utils/infraTopic.js'),
             ('src/router/index.js', 'src/router/index.js'),
             ('src/services/api.js', 'src/services/api.js'),
             ('src/views/HomeView.vue', 'src/views/HomeView.vue'),
+            ('src/views/LoginView.vue', 'src/views/LoginView.vue'),
+            ('src/views/RegisterView.vue', 'src/views/RegisterView.vue'),
+            ('src/views/InfrastructureDemoView.vue', 'src/views/InfrastructureDemoView.vue'),
+            ('src/views/VerifyEmailView.vue', 'src/views/VerifyEmailView.vue'),
         ]
         
         for template_rel, output_rel in frontend_templates:
@@ -393,8 +414,27 @@ DB_PORT={self.db_port}
 DB_TEST_PORT={self.db_test_port}
 UID={self.uid}
 GID={self.gid}
+
+# HTTP gateway (nginx) and browser-facing API URL for Vite
+GATEWAY_PORT=80
+CORE_URL=http://localhost
+
+# Shared with {self.backend_name}/.env INTERNAL_CRON_SECRET (compose sets it for the API)
+CRON_SECRET=change-me-in-dev
+CRON_TZ=UTC
 """
         Path('.env.example').write_text(env_content)
+
+    def _create_nginx(self):
+        """Copy nginx gateway config (templated)."""
+        nginx_includes = Path('nginx/includes')
+        nginx_includes.mkdir(parents=True, exist_ok=True)
+        self._process_template('main/nginx/default.conf', 'nginx/default.conf')
+        self._process_template('main/nginx/includes/locations.conf', 'nginx/includes/locations.conf')
+
+    def _create_compose_override_example(self):
+        """Optional compose override sample."""
+        self._process_template('main/compose.override.example.yml', 'compose.override.example.yml')
     
     def _create_gitignore(self):
         """Create .gitignore"""

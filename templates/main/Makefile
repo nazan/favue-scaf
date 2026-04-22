@@ -56,6 +56,11 @@ create-volumes:
 	else \
 		docker volume create ${PROJECT_NAME}_sitepack; \
 	fi
+	@if docker volume inspect ${PROJECT_NAME}_redis_data >/dev/null 2>&1; then \
+		echo "⚠ Warning: Volume ${PROJECT_NAME}_redis_data already exists"; \
+	else \
+		docker volume create ${PROJECT_NAME}_redis_data; \
+	fi
 	@echo "✓ Docker volumes ready."
 
 build: touch-all
@@ -74,7 +79,7 @@ up: touch-all
 	@echo "✓ Services started."
 
 down:
-	@docker compose down
+	@docker compose down --timeout 5
 
 migrate:
 	@echo "Running database migrations..."
@@ -87,7 +92,7 @@ test:
 	@echo "✓ Tests complete."
 
 logs:
-	@docker compose logs -f ${BACKEND_NAME} ${FRONTEND_NAME}
+	@docker compose logs -f ${BACKEND_NAME} ${FRONTEND_NAME} gateway ${BACKEND_NAME}-worker
 
 clean-volumes:
 	@echo "⚠ WARNING: This will delete all database data in the Docker volumes!"

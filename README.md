@@ -67,7 +67,7 @@ This creates a Docker image named `favue-scaf` containing the scaffolding tool a
    - **Database name** (defaults to project name)
    - **Port numbers** (API, Web, Database - defaults: 8000, 5173, 3306)
 
-4. After scaffolding, navigate to your new project and run:
+4. After scaffolding, navigate to your new project, make any necessary modifications to the .env file (you would want to change UID/GID) and run:
    ```bash
    cd ~/projects/your-project-name
    make setup
@@ -149,9 +149,9 @@ your-project-name/
 - **SQLAlchemy Core**: Async database access without ORM
 - **Alembic**: Database migration system
 - **Pytest**: Testing framework with async support
-- **Example Service**: `UtilityService` with database version query
-- **Example Endpoint**: `GET /api/dbversion` demonstrating end-to-end connectivity
-- **Pydantic Models**: Example request/response schemas
+- **Service Layer**: Includes auth, infra demo, and transactional email integration
+- **Auth**: JWT-based login and protected route support
+- **Pydantic Models**: Typed request/response schemas
 
 ### Frontend (Vue.js)
 
@@ -159,7 +159,7 @@ your-project-name/
 - **Vue Router**: Client-side routing
 - **Vite**: Fast development server with HMR
 - **API Client**: Centralized API service with error handling
-- **Example View**: Home page calling `/api/dbversion` endpoint
+- **Demo Views**: Auth + infrastructure verification flow
 
 ### Development Environment
 

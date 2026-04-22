@@ -3,44 +3,22 @@
     <div class="container">
       <h1>Welcome to ${PROJECT_NAME}</h1>
       <div class="card">
-        <h2>Database Connection Test</h2>
-        <div v-if="loading" class="status loading">Loading...</div>
-        <div v-else-if="error" class="status error">Error: {{ error }}</div>
-        <div v-else-if="dbVersion" class="status success">
-          <p><strong>Database Version:</strong> {{ dbVersion.version }}</p>
-          <p><strong>Status:</strong> {{ dbVersion.status }}</p>
-        </div>
-        <button @click="fetchVersion" :disabled="loading" class="btn">
-          {{ loading ? 'Loading...' : 'Refresh' }}
-        </button>
+        <h2>Auth &amp; stack demo</h2>
+        <p class="blurb">
+          <router-link to="/register">Register</router-link> to get a verification link (in development, inspect the
+          <strong>core</strong> service logs for the log email transport), open it or visit
+          <code>/verify-email?token=…</code>, then use <strong>Infrastructure demo</strong> in the nav after
+          <router-link to="/login">log in</router-link>. That flow uses JWT, Taskiq, Redis, WebSockets, and the cron → internal route.
+        </p>
+        <p class="hint">
+          Best experience: use the HTTP gateway (e.g. <code>http://localhost</code> with <code>GATEWAY_PORT=80</code>) so API, Vite, and WebSockets share one origin.
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getDatabaseVersion } from '../services/api'
-
-const dbVersion = ref(null)
-const loading = ref(false)
-const error = ref(null)
-
-async function fetchVersion() {
-  loading.value = true
-  error.value = null
-  try {
-    dbVersion.value = await getDatabaseVersion()
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(() => {
-  fetchVersion()
-})
 </script>
 
 <style scoped>
@@ -75,49 +53,8 @@ h2 {
   font-size: 1.5rem;
 }
 
-.status {
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.status.loading {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.status.error {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.status.success {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status.success p {
-  margin: 0.5rem 0;
-}
-
-.btn {
-  background: #1976d2;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.2s;
-}
-
-.btn:hover:not(:disabled) {
-  background: #1565c0;
-}
-
-.btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
+.blurb { color: #3f3f46; line-height: 1.5; margin-bottom: 0.75rem; }
+.hint { color: #71717a; font-size: 0.9rem; line-height: 1.4; }
+.hint code { background: #f4f4f5; padding: 0.1em 0.3em; border-radius: 4px; }
 </style>
 
